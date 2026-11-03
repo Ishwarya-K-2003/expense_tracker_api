@@ -1,5 +1,6 @@
 package com.ishwarya.expenses_tracker.controller;
 
+import java.security.Principal;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
@@ -30,28 +31,29 @@ public class ExpenseController {
     }
 
     @PostMapping
-    public ResponseEntity<Expense> createExpense(@Valid @RequestBody ExpenseRequest request) {
-        return new ResponseEntity<>(expenseService.createExpense(request), HttpStatus.CREATED);
+    public ResponseEntity<Expense> createExpense(@Valid @RequestBody ExpenseRequest request, Principal principal) {
+        Expense saved = expenseService.createExpense(request, principal.getName());
+        return new ResponseEntity<>(saved, HttpStatus.CREATED);
     }
 
     @GetMapping
-    public List<Expense> getAllExpenses() {
-        return expenseService.getAllExpenses();
+    public List<Expense> getAllExpenses(Principal principal) {
+        return expenseService.getAllExpenses(principal.getName());
     }
 
     @GetMapping("/{id}")
-    public Expense getExpenseById(@PathVariable Long id) {
-        return expenseService.getExpenseById(id);
+    public Expense getExpenseById(@PathVariable Long id, Principal principal) {
+        return expenseService.getExpenseById(id, principal.getName());
     }
 
     @PutMapping("/{id}")
-    public Expense updateExpense(@PathVariable Long id, @Valid @RequestBody ExpenseRequest request) {
-        return expenseService.updateExpense(id, request);
+    public Expense updateExpense(@PathVariable Long id, @Valid @RequestBody ExpenseRequest request, Principal principal) {
+        return expenseService.updateExpense(id, request, principal.getName());
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> deleteExpense(@PathVariable Long id) {
-        expenseService.deleteExpense(id);
+    public ResponseEntity<String> deleteExpense(@PathVariable Long id, Principal principal) {
+        expenseService.deleteExpense(id, principal.getName());
         return ResponseEntity.ok("Expense deleted successfully");
     }
 }

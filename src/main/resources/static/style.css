@@ -237,3 +237,42 @@ td.actions {
     grid-column: 1 / -1;
   }
 }
+
+.hidden {
+  display: none !important;
+}
+
+.auth-card {
+  max-width: 400px;
+  margin: 64px auto 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 28px;
+}
+
+.auth-card form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 0;
+  border: none;
+  background: none;
+  margin-top: 18px;
+}
+
+.sub {
+  color: var(--muted);
+  margin: 6px 0 0;
+}
+
+.who {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin-top: 4px;
+}
+
+#toggleAuth {
+  margin-top: 12px;
+  padding-left: 0;
+}

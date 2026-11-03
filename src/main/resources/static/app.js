@@ -1,8 +1,9 @@
-// Same server as Spring Boot, so no full URL needed
 const API = "/api/expenses";
+const AUTH_API = "/api/auth";
 
 let expenses = [];
 let editingId = null;
+let registerMode = false;
 
 const $ = (id) => document.getElementById(id);
 
@@ -19,12 +20,6 @@ function today() {
   return d.toISOString().slice(0, 10);
 }
 
-function say(text, type) {
-  const m = $("msg");
-  m.textContent = text;
-  m.className = "msg " + (type || "");
-}
-
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({
     "&": "&amp;",
@@ -35,19 +30,67 @@ function escapeHtml(s) {
   }[c]));
 }
 
-async function call(url, options) {
-  const res = await fetch(url, options);
-  if (!res.ok) {
-    let detail = "";
-    try {
-      const body = await res.json();
-      detail = body.message || body.error || JSON.stringify(body);
-    } catch (e) {
-      detail = res.statusText;
-    }
-    throw new Error("Request failed (" + res.status + "). " + detail);
-  }
+/* ---------- Login state (kept only for this browser tab) ---------- */
+
+function getAuth() {
+  return sessionStorage.getItem("auth");
+}
+
+function getEmail() {
+  return sessionStorage.getItem("email");
+}
+
+function saveLogin(email, password) {
+  const token = btoa(unescape(encodeURIComponent(email + ":" + password)));
+  sessionStorage.setItem("auth", "Basic " + token);
+  sessionStorage.setItem("email", email);
+}
+
+function clearLogin() {
+  sessionStorage.removeItem("auth");
+  sessionStorage.removeItem("email");
+}
+
+/* ---------- Messages ---------- */
+
+function say(text, type) {
+  const m = $("msg");
+  m.textContent = text;
+  m.className = "msg " + (type || "");
+}
+
+function sayAuth(text, type) {
+  const m = $("authMsg");
+  m.textContent = text;
+  m.className = "msg " + (type || "");
+}
+
+/* ---------- API helper ---------- */
+
+async function call(url, options = {}) {
+  const headers = Object.assign({}, options.headers);
+  const auth = getAuth();
+  if (auth) headers["Authorization"] = auth;
+
+  const res = await fetch(url, Object.assign({}, options, { headers }));
   const text = await res.text();
+
+  if (!res.ok) {
+    if (res.status === 401) {
+      const err = new Error("Wrong email or password.");
+      err.status = 401;
+      throw err;
+    }
+    let detail = text;
+    try {
+      const body = JSON.parse(text);
+      detail = body.message || body.error || text;
+    } catch (e) {}
+    const err = new Error(detail || "Request failed (" + res.status + ")");
+    err.status = res.status;
+    throw err;
+  }
+
   try {
     return JSON.parse(text);
   } catch (e) {
@@ -55,13 +98,92 @@ async function call(url, options) {
   }
 }
 
+/* ---------- Show / hide screens ---------- */
+
+function showAuth() {
+  $("authSection").classList.remove("hidden");
+  $("appSection").classList.add("hidden");
+}
+
+function showApp() {
+  $("authSection").classList.add("hidden");
+  $("appSection").classList.remove("hidden");
+  $("whoami").textContent = getEmail();
+  resetForm();
+  load();
+}
+
+function setRegisterMode(on) {
+  registerMode = on;
+  $("nameRow").classList.toggle("hidden", !on);
+  $("authName").required = on;
+  $("authBtn").textContent = on ? "Create account" : "Log in";
+  $("authSub").textContent = on
+    ? "Create an account to start tracking."
+    : "Log in to see your expenses.";
+  $("toggleAuth").textContent = on
+    ? "Already have an account? Log in"
+    : "New here? Create an account";
+  sayAuth("", "");
+}
+
+/* ---------- Login / Register ---------- */
+
+$("toggleAuth").addEventListener("click", () => setRegisterMode(!registerMode));
+
+$("authForm").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  const email = $("authEmail").value.trim();
+  const password = $("authPassword").value;
+
+  try {
+    if (registerMode) {
+      await call(AUTH_API + "/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: $("authName").value.trim(),
+          email: email,
+          password: password,
+        }),
+      });
+    }
+
+    // Check the login by asking for the expense list
+    saveLogin(email, password);
+    await call(API);
+
+    $("authForm").reset();
+    setRegisterMode(false);
+    showApp();
+  } catch (e) {
+    clearLogin();
+    sayAuth(e.message, "err");
+  }
+});
+
+$("logoutBtn").addEventListener("click", () => {
+  clearLogin();
+  expenses = [];
+  setRegisterMode(false);
+  showAuth();
+});
+
+/* ---------- Expenses ---------- */
+
 async function load() {
   try {
     expenses = await call(API);
     refreshFilter();
     render();
   } catch (e) {
-    say("Could not load expenses. Is the Spring Boot app running? " + e.message, "err");
+    if (e.status === 401) {
+      clearLogin();
+      showAuth();
+      sayAuth("Please log in again.", "err");
+    } else {
+      say("Could not load expenses. " + e.message, "err");
+    }
   }
 }
 
@@ -114,6 +236,7 @@ function resetForm() {
   $("expenseForm").reset();
   $("date").value = today();
   $("saveBtn").textContent = "Add expense";
+  say("", "");
 }
 
 $("expenseForm").addEventListener("submit", async (ev) => {
@@ -131,8 +254,8 @@ $("expenseForm").addEventListener("submit", async (ev) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    say(isEdit ? "Expense updated." : "Expense added.", "ok");
     resetForm();
+    say(isEdit ? "Expense updated." : "Expense added.", "ok");
     load();
   } catch (e) {
     say(e.message, "err");
@@ -160,8 +283,8 @@ $("rows").addEventListener("click", async (ev) => {
     if (!confirm("Delete this expense?")) return;
     try {
       await call(API + "/" + delId, { method: "DELETE" });
-      say("Expense deleted.", "ok");
       if (String(editingId) === delId) resetForm();
+      say("Expense deleted.", "ok");
       load();
     } catch (e) {
       say(e.message, "err");
@@ -171,5 +294,10 @@ $("rows").addEventListener("click", async (ev) => {
 
 $("filter").addEventListener("change", render);
 
-$("date").value = today();
-load();
+/* ---------- Start ---------- */
+
+if (getAuth()) {
+  showApp();
+} else {
+  showAuth();
+}

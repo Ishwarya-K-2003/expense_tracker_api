@@ -8,62 +8,92 @@
 </head>
 <body>
 <div class="wrap">
-  <header>
+
+  <!-- Login / Register -->
+  <section id="authSection" class="auth-card">
     <h1>Expense Tracker</h1>
-    <div class="total">
-      <div class="amt" id="total">₹0</div>
-      <div class="lbl" id="totalLabel">Total spent</div>
+    <p class="sub" id="authSub">Log in to see your expenses.</p>
+
+    <form id="authForm">
+      <label id="nameRow" class="hidden">Name
+        <input id="authName" placeholder="Ishwarya">
+      </label>
+      <label>Email
+        <input id="authEmail" type="email" required placeholder="you@example.com">
+      </label>
+      <label>Password
+        <input id="authPassword" type="password" required minlength="6" placeholder="At least 6 characters">
+      </label>
+      <button class="primary" type="submit" id="authBtn">Log in</button>
+    </form>
+
+    <p class="msg" id="authMsg" role="status"></p>
+    <button class="link" type="button" id="toggleAuth">New here? Create an account</button>
+  </section>
+
+  <!-- Expense app -->
+  <section id="appSection" class="hidden">
+    <header>
+      <div>
+        <h1>Expense Tracker</h1>
+        <div class="who">Logged in as <span id="whoami"></span> <button class="link" id="logoutBtn" type="button">Log out</button></div>
+      </div>
+      <div class="total">
+        <div class="amt" id="total">₹0</div>
+        <div class="lbl" id="totalLabel">Total spent</div>
+      </div>
+    </header>
+
+    <form id="expenseForm">
+      <label>Title
+        <input id="title" required placeholder="Lunch">
+      </label>
+      <label>Amount (₹)
+        <input id="amount" type="number" min="0.01" step="0.01" required placeholder="150">
+      </label>
+      <label>Category
+        <select id="category" required>
+          <option>Food</option>
+          <option>Travel</option>
+          <option>Bills</option>
+          <option>Shopping</option>
+          <option>Health</option>
+          <option>Other</option>
+        </select>
+      </label>
+      <label>Date
+        <input id="date" type="date" required>
+      </label>
+      <button class="primary" type="submit" id="saveBtn">Add expense</button>
+    </form>
+    <p class="msg" id="msg" role="status"></p>
+
+    <div class="toolbar">
+      <h2>Your expenses</h2>
+      <label class="filter-label">
+        Show
+        <select id="filter">
+          <option value="">All categories</option>
+        </select>
+      </label>
     </div>
-  </header>
 
-  <form id="expenseForm">
-    <label>Title
-      <input id="title" required placeholder="Lunch">
-    </label>
-    <label>Amount (₹)
-      <input id="amount" type="number" min="0.01" step="0.01" required placeholder="150">
-    </label>
-    <label>Category
-      <select id="category" required>
-        <option>Food</option>
-        <option>Travel</option>
-        <option>Bills</option>
-        <option>Shopping</option>
-        <option>Health</option>
-        <option>Other</option>
-      </select>
-    </label>
-    <label>Date
-      <input id="date" type="date" required>
-    </label>
-    <button class="primary" type="submit" id="saveBtn">Add expense</button>
-  </form>
-  <p class="msg" id="msg" role="status"></p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Title</th>
+            <th>Category</th>
+            <th class="num">Amount</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </section>
 
-  <div class="toolbar">
-    <h2>Your expenses</h2>
-    <label class="filter-label">
-      Show
-      <select id="filter">
-        <option value="">All categories</option>
-      </select>
-    </label>
-  </div>
-
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>Date</th>
-          <th>Title</th>
-          <th>Category</th>
-          <th class="num">Amount</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody id="rows"></tbody>
-    </table>
-  </div>
 </div>
 
 <script src="app.js"></script>
